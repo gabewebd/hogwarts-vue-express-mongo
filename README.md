@@ -1,9 +1,13 @@
-This is a mock login portal based on Hogwarts, a fictional school from the story Harry Potter.
+## Hogwarts Portal
+# This project is a simple web portal for a school administration system, built with a Vue.js front end and an Express.js back end. It includes different login types for users, students, and administrators.
 
-## 3 Page Routes: Homepage, studentForm, adminForm
-## 2 API Routes (GET): getStudent, getAdmin
+## Features
+# User Management: Separate dashboards for regular users, students, and admins.
+# Student Grading: An admin panel for professors to view and update student grades.
+# API Endpoints: RESTful API for handling user authentication and data management.
+# Error Handling: A custom 404 page for invalid routes.
 
-### you can try this out on: hogwarts-login-portal.vercel.app
-
-express(local-version).js is the initial version before it was deployed on Vercel.
-"# hogwarts-vue-express-app" 
+## Tech Stack
+# Frontend: Vue.js
+# Backend: Node.js with Express
+# Database: In-memory database (for development)
