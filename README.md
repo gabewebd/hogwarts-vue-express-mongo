@@ -10,4 +10,4 @@ This project is a simple web portal for a school administration system, built wi
 ## Tech Stack
 * **Frontend**: Vue.js
 * **Backend**: Node.js with Express
-* **Database**: In-memory database (for development)
+* **Database**: MongoDB
