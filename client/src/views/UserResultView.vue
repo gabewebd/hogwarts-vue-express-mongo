@@ -39,7 +39,7 @@
 
         <div class="admin-panel" v-if="students.length > 0">
           <h2>Student Grading Panel</h2>
-          <p>Select a student to update their grade.</p>
+          <p>Select a student to update their grade or delete them.</p>
 
           <form @submit.prevent="updateStudentGrade">
             <label for="studentSelect">Select Student:</label>
@@ -53,7 +53,10 @@
             <label for="newGrade">New Grade:</label>
             <input type="number" id="newGrade" v-model="newGrade" class="magical-input" step="0.1" min="0" max="100" />
             
-            <input type="submit" value="Update Grade" :disabled="!selectedStudentId || newGrade === null" />
+            <div class="admin-actions">
+              <input type="submit" value="Update Grade" :disabled="!selectedStudentId || newGrade === null" />
+              <button type="button" @click="deleteStudent" :disabled="!selectedStudentId">Delete Student</button>
+            </div>
           </form>
           <p v-if="gradeMessage" :class="gradeMessageClass">{{ gradeMessage }}</p>
         </div>
@@ -80,21 +83,7 @@
           <router-link :to="tryAgainLink" class="magical-button">Try Again</router-link>
         </nav>
       </template>
-      <template v-else-if="type === '404'">
-        <h1 class="error-404">404</h1>
-        <h2>Page Not Found!</h2>
-        <p class="magical-text">The magical page you seek does not exist</p>
-        <p>The page you're looking for cannot be found in our magical database.</p>
-        <p class="spell-text">Perhaps it was hidden by a Disillusionment Charm?</p>
-        <div class="error-details">
-          <h2>What happened?</h2>
-          <p><strong>Requested Path:</strong> {{ currentUserData.path }}</p>
-          <p>The path you're trying to access doesn't exist in our magical portal. Please check the URL for any spelling mistakes or return to the main portal.</p>
-        </div>
-        <nav>
-          <router-link to="/" class="magical-button">Return to Hogwarts Portal</router-link>
-        </nav>
-      </template>
+      
     </template>
   </div>
 </template>
@@ -120,6 +109,7 @@ export default {
       return this.$route.query.type;
     },
     currentUserData() {
+      // Prefer data from router state if available, otherwise fallback to route query
       return this.routerStateData || this.$route.query;
     },
     authenticationFailedMessage() {
@@ -151,34 +141,36 @@ export default {
     console.log('Route query:', this.$route.query);
     console.log('Router state:', history.state);
     
+    // Use history.state.userData if available, as it might contain more complete data
     if (history.state && history.state.userData) {
       this.routerStateData = history.state.userData;
       console.log('Using router state data:', this.routerStateData);
+    } else {
+      // Fallback to route.query if history.state.userData is not present
+      this.routerStateData = this.$route.query;
+      console.log('Using route query data:', this.routerStateData);
     }
     
+    // Only fetch students if the user is an admin and login was successful
     if (this.type === 'admin' && this.status === 'success') {
       await this.fetchStudents();
     }
   },
   watch: {
+    // Watch for route changes to ensure data is updated correctly
     '$route': {
-      immediate: true,
+      immediate: true, // Run immediately on component mount
       async handler(newRoute) {
+        // Re-evaluate routerStateData if the route changes
         if (history.state && history.state.userData) {
           this.routerStateData = history.state.userData;
-          
-          if (newRoute.query.type === 'admin' && newRoute.query.status === 'success') {
-            await this.fetchStudents();
-          }
         } else {
-          if (newRoute.query.students && typeof newRoute.query.students === 'string') {
-            try {
-              this.students = JSON.parse(newRoute.query.students);
-            } catch (error) {
-              console.error('Failed to parse students from query:', error);
-              this.students = [];
-            }
-          }
+          this.routerStateData = newRoute.query;
+        }
+        
+        // Re-fetch students if the route changes to admin success status
+        if (newRoute.query.type === 'admin' && newRoute.query.status === 'success') {
+          await this.fetchStudents();
         }
       }
     }
@@ -230,6 +222,7 @@ export default {
           this.gradeMessage = data.message;
           this.gradeMessageClass = 'success-message';
           
+          // Update the student in the local list
           if (data.updatedStudent) {
             const studentIndex = this.students.findIndex(s => s.studentID === this.selectedStudentId);
             if (studentIndex !== -1) {
@@ -245,6 +238,48 @@ export default {
         }
       } catch (error) {
         console.error('Error updating grade:', error);
+        this.gradeMessage = 'Failed to connect to the server.';
+        this.gradeMessageClass = 'error-message';
+      }
+    },
+
+    // delete student
+    async deleteStudent() {
+      if (!this.selectedStudentId) {
+        this.gradeMessage = 'Please select a student to delete.';
+        this.gradeMessageClass = 'error-message';
+        return;
+      }
+
+      // Optional: Add a confirmation dialog for deletion
+      const confirmDelete = confirm(`Are you sure you want to delete student with ID ${this.selectedStudentId}? This action cannot be undone.`);
+      if (!confirmDelete) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/students/${this.selectedStudentId}`, {
+          method: 'DELETE',
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          this.gradeMessage = data.message;
+          this.gradeMessageClass = 'success-message';
+          
+          // Remove the deleted student from the local list
+          this.students = this.students.filter(s => s.studentID !== this.selectedStudentId);
+          
+          // Clear selection and message
+          this.selectedStudentId = '';
+          this.newGrade = null; // Also reset grade input if it was filled
+        } else {
+          this.gradeMessage = data.message || 'Failed to delete student.';
+          this.gradeMessageClass = 'error-message';
+        }
+      } catch (error) {
+        console.error('Error deleting student:', error);
         this.gradeMessage = 'Failed to connect to the server.';
         this.gradeMessageClass = 'error-message';
       }
@@ -276,6 +311,15 @@ export default {
   flex-direction: column;
   gap: 15px;
 }
+
+.admin-actions {
+  display: flex;
+  flex-direction: column; /* This will stack items vertically */
+  justify-content: center;
+  gap: 10px;
+  align-items: center; /* This will center items horizontally when stacked */
+}
+
 .admin-panel label {
   color: #d4af37;
 }
@@ -309,4 +353,5 @@ export default {
   border-color: #d4af37;
   box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
 }
+
 </style>

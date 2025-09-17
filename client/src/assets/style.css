@@ -299,7 +299,7 @@ select option {
     color: #fff;
 }
 
-input[type="submit"] {
+input[type="submit"], button[type="button"] {
     background: linear-gradient(135deg, #dc143c 0%, #b22222 50%, #8b0000 100%);
     color: white;
     padding: 14px 35px;
@@ -317,7 +317,7 @@ input[type="submit"] {
     box-sizing: border-box;
 }
 
-input[type="submit"]:hover {
+input[type="submit"]:hover, button[type="button"]:hover {
     background: linear-gradient(135deg, #ff1744 0%, #d32f2f 50%, #b71c1c 100%);
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(220, 20, 60, 0.4);
